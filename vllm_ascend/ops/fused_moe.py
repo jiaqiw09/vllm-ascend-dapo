@@ -120,6 +120,7 @@ def fused_experts_with_mc2(
     moe_all_to_all_group_name: Optional[str] = None,
     shared_experts: Optional[Any] = None
 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    ep_group = get_ep_group().device_group
     vllm_config = get_current_vllm_config()
     global_bs = vllm_config.scheduler_config.max_num_seqs * torch.distributed.get_world_size(ep_group)
     moe_expert_num = len(expert_map)
@@ -135,7 +136,7 @@ def fused_experts_with_mc2(
     rank = torch.distributed.get_rank()
 
     quant_mode = 0
-    ep_group = get_ep_group().device_group
+
     local_rank = torch.distributed.get_rank(group=ep_group)
     all_to_all_group_size = torch.distributed.get_world_size(ep_group)
 
