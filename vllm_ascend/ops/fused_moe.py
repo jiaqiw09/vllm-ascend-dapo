@@ -120,7 +120,10 @@ def fused_experts_with_mc2(
     moe_all_to_all_group_name: Optional[str] = None,
     shared_experts: Optional[Any] = None
 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-    global_bs = 0
+    vllm_config = get_current_vllm_config()
+    ep_group = get_ep_group().device_group
+    all_to_all_group_size = torch.distributed.get_world_size(ep_group)
+    global_bs = vllm_config.scheduler_config.max_num_seqs * all_to_all_group_size
     moe_expert_num = len(expert_map)
     kwargs_mc2 = {
         "x": hidden_states,
@@ -132,11 +135,8 @@ def fused_experts_with_mc2(
     }
 
     rank = torch.distributed.get_rank()
-
     quant_mode = 0
-    ep_group = get_ep_group().device_group
     local_rank = torch.distributed.get_rank(group=ep_group)
-    all_to_all_group_size = torch.distributed.get_world_size(ep_group)
 
     tp_size = get_etp_group().world_size
     tp_rank = rank % tp_size
@@ -204,7 +204,7 @@ def fused_experts_with_mc2(
         "expert_shard_type": 0,
         "shared_expert_rank_num": 0,
         "moe_expert_num": moe_expert_num,
-        "global_bs": 0,
+        "global_bs": global_bs,
     }
     tp_recv_counts = output[5]
     stage3_kwargs = {
