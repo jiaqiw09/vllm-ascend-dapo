@@ -65,6 +65,7 @@ def forward_oot(
     #     top_k=top_k,
     #     expert_map=expert_map,
     #     apply_router_weight_on_input=apply_router_weight_on_input)
+
     return fused_experts_with_all2all(
         hidden_states=x,
         w1=layer.w13_weight,
@@ -74,7 +75,7 @@ def forward_oot(
         top_k=top_k,
         expert_map=expert_map,
         ep_group=get_ep_group()
-        )
+    )
 
 
 UnquantizedFusedMoEMethod.forward_oot = forward_oot

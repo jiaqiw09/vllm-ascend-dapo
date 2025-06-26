@@ -34,17 +34,26 @@ def init_ascend_model_parallel(
     if model_parallel_initialized():
         return
     assert torch.distributed.is_initialized()
-    world_size = world_size or torch.distributed.get_world_size()
+    world_size = torch.distributed.get_world_size()
     backend = backend or torch.distributed.get_backend(
         get_world_group().device_group)
-    num_expert_parallel_groups = expert_tensor_parallel_size
-    num_expert_tensor_parallel_groups = expert_parallel_size
+    # num_expert_parallel_groups = expert_tensor_parallel_size
+    # num_expert_tensor_parallel_groups = expert_parallel_size
+    num_instance_count = world_size // expert_parallel_size // expert_tensor_parallel_size
+    num_expert_parallel_groups_per_instance = expert_tensor_parallel_size
+    num_expert_tensor_parallel_groups_per_instance = expert_parallel_size
+    instance_size = expert_parallel_size * expert_tensor_parallel_size
 
     global _EP
     group_ranks = []
-    for i in range(num_expert_parallel_groups):
-        ranks = list(range(i, world_size, num_expert_parallel_groups))
-        group_ranks.append(ranks)
+    # for i in range(num_expert_parallel_groups):
+    #     ranks = list(range(i, world_size, num_expert_parallel_groups))
+    #     group_ranks.append(ranks)
+    for k in range(num_instance_count):
+        instance_offset = k * instance_size
+        for i in range(num_expert_parallel_groups_per_instance):
+            ranks = list(range(i + instance_offset, i + instance_offset + instance_size, expert_tensor_parallel_size))
+            group_ranks.append(ranks)
 
     _EP = init_model_parallel_group(group_ranks,
                                     get_world_group().local_rank,
@@ -53,11 +62,12 @@ def init_ascend_model_parallel(
 
     group_ranks = []
     global _ETP
-    for i in range(num_expert_tensor_parallel_groups):
-        ranks = list(
-            range(i * expert_tensor_parallel_size,
-                  (i + 1) * expert_tensor_parallel_size))
-        group_ranks.append(ranks)
+    for k in range(num_instance_count):
+        instance_offset = k * instance_size
+        for i in range(num_expert_tensor_parallel_groups_per_instance):
+            ranks = list(
+                range(i * expert_tensor_parallel_size + instance_offset, (i + 1) * expert_tensor_parallel_size + instance_offset))
+            group_ranks.append(ranks)
 
     _ETP = init_model_parallel_group(group_ranks,
                                      get_world_group().local_rank,
