@@ -11,7 +11,7 @@ scipy
 setuptools>=64
 setuptools-scm>=8
 torch>=2.5.1
-torchvision<0.21.0
+#torchvision<0.21.0
 wheel
 
 # requirements for disaggregated prefill
