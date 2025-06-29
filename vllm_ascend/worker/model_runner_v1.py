@@ -1213,7 +1213,10 @@ class NPUModelRunner(LoRAModelRunnerMixin):
                 input_ids = None
                 inputs_embeds = self.inputs_embeds[:num_tokens]
             else:
-                input_ids = self.input_ids[:num_tokens]
+                #input_ids = self.input_ids[:num_tokens]
+                input_ids = torch.randint_like(self.input_ids[:num_tokens], low=0,
+                                               high=self.model_config.get_vocab_size(),
+                                               dtype=self.input_ids.dtype)
                 inputs_embeds = None
 
             if self.uses_mrope:
